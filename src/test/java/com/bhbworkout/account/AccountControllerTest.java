@@ -1,5 +1,6 @@
 package com.bhbworkout.account;
 
+import com.bhbworkout.domain.Account;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -52,8 +53,12 @@ class AccountControllerTest {
                 .andExpect(status().is3xxRedirection())
                 .andExpect(view().name("redirect:/"));
 
-        assertTrue(accountRepository.existsByEmail("selre1@naver.com"));
+        Account account = accountRepository.findByEmail("selre1@naver.com");
+        assertNotNull(account);
+        assertNotEquals(account.getPassword(),"1234556754");
+        //assertTrue(accountRepository.existsByEmail("selre1@naver.com"));
         //any => 아무런 메세지 타임에 메세지가 호출 되었는가
         then(javaMailSender).should().send(any(SimpleMailMessage.class));
     }
+
 }

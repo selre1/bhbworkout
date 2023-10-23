@@ -4,6 +4,7 @@ import com.bhbworkout.domain.Account;
 import lombok.RequiredArgsConstructor;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -12,6 +13,8 @@ public class AccountService {
 
     private final AccountRepository accountRepository;
     private final JavaMailSender javaMailSender;
+
+    private final PasswordEncoder passwordEncoder;
 
     public void processNewAccount(SignUpForm signUpform) {
         Account newAccount = saveNewAccount(signUpform);
@@ -22,7 +25,7 @@ public class AccountService {
         Account account = Account.builder()
                 .email(signUpform.getEmail())
                 .nickname(signUpform.getNickname())
-                .password(signUpform.getPassword())
+                .password(passwordEncoder.encode(signUpform.getPassword()))
                 .studyUpdatedResultByWeb(true)
                 .studyCreatedByWeb(true)
                 .studyEnrollmentResultByWeb(true)
