@@ -6,6 +6,7 @@ import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -16,9 +17,10 @@ public class AccountService {
 
     private final PasswordEncoder passwordEncoder;
 
+    @Transactional
     public void processNewAccount(SignUpForm signUpform) {
         Account newAccount = saveNewAccount(signUpform);
-        newAccount.generateEmailCheckToken();
+        newAccount.generateEmailCheckToken();// 위의 트랙젝션안에 있어야 persist 상태가 됌
         sendSignUpMailSender(newAccount);
     }
     private Account saveNewAccount(SignUpForm signUpform) {
@@ -30,7 +32,7 @@ public class AccountService {
                 .studyCreatedByWeb(true)
                 .studyEnrollmentResultByWeb(true)
                 .build();
-        Account newAccount = accountRepository.save(account);
+        Account newAccount = accountRepository.save(account); // 여기서는 트랜잭션 (엔티티가 persist 영속성임)
         return newAccount;
     }
 
@@ -42,5 +44,4 @@ public class AccountService {
                 "&email=" + newAccount.getEmail());
         javaMailSender.send(message);
     }
-
 }
