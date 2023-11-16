@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+
+<head th:replace="fragments.html :: head"></head>
+
+<body class="bg-light">
+<div th:replace="fragments.html :: main-nav"></div>
+
+<div class="py-5 text-center" th:if="${error}">
+  <p class="lead"> 가입 </p>
+  <small class="text-info">
+    <p class="lead" th:text="${email}"></p>
+    <div class="alert alert-danger" role="alert" th:text="${error}"></div>
+  </small>
+</div>
+
+<div class="py-5 text-center" th:if="${error == null}">
+  <p class="lead"> bhb 이메일 확인</p>
+  <h2>
+    이메일을 확인하세요.
+  </h2>
+  <small class="text-info">
+    <p class="lead" th:text="${email}"></p>
+    <a class="btn btn-outline-info" th:href="@{/resend-eamil-token}" >이메일 보내기</a>
+    </small>
+</div>
+
+<div th:replace="fragments.html :: footer"></div>
+
+</body>
+</html>
