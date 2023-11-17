@@ -1,8 +1,11 @@
 package com.bhbworkout.account;
 
 import com.bhbworkout.domain.Account;
+import com.bhbworkout.settings.NicknameForm;
+import com.bhbworkout.settings.Notifications;
 import com.bhbworkout.settings.Profile;
 import lombok.RequiredArgsConstructor;
+import org.modelmapper.ModelMapper;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -27,6 +30,8 @@ public class AccountService implements UserDetailsService {
     private final AccountRepository accountRepository;
     private final JavaMailSender javaMailSender;
     private final PasswordEncoder passwordEncoder;
+
+    private final ModelMapper modelMapper;
 
     @Transactional
     public Account processNewAccount(SignUpForm signUpform) {
@@ -94,11 +99,13 @@ public class AccountService implements UserDetailsService {
     }
 
     public void updateProfile(Account account, Profile profile) {
-        account.setUrl(profile.getUrl());
+        modelMapper.map(profile,account);
+
+       /* account.setUrl(profile.getUrl());
         account.setOccupation(profile.getOccupation());
         account.setLocation(profile.getLocation());
         account.setBio(profile.getBio());
-        account.setProfileImage(profile.getProfileImage());
+        account.setProfileImage(profile.getProfileImage());*/
         // ***** 중요 !! account가 persistence 상태가 아닌데 싱크를 맞출 수 있는 방법!!!
         // save 구현체 안에서 아이디 값이 있는지 없는지 보고 있으면 merge를 시킴!!
         // 아이디 값은 account 객체가 detached 상태여서 가지고 있음
@@ -110,5 +117,23 @@ public class AccountService implements UserDetailsService {
     public void updatePassword(Account account, String newPassword) {
         account.setPassword(passwordEncoder.encode(newPassword));
         accountRepository.save(account);
+    }
+
+    public void updateNotifications(Account account, Notifications notifications) {
+
+        modelMapper.map(notifications,account);
+       /* account.setStudyCreatedByEmail(notifications.isStudyCreatedByEmail());
+        account.setStudyCreatedByWeb(notifications.isStudyCreatedByWeb());
+        account.setStudyUpdatedByEmail(notifications.isStudyUpdatedByEmail());
+        account.setStudyUpdatedByWeb(notifications.isStudyUpdatedByWeb());
+        account.setStudyEnrollmentResultByEmail(notifications.isStudyEnrollmentResultByEmail());
+        account.setStudyEnrollmentResultByWeb(notifications.isStudyEnrollmentResultByWeb());*/
+        accountRepository.save(account);
+    }
+
+    public void updateAccount(Account account, NicknameForm nicknameForm) {
+        account.setNickname(nicknameForm.getNickname());
+        accountRepository.save(account);
+        login(account); // 네비바 로그인 상태 값 변경을 위해서 다시 로그인
     }
 }

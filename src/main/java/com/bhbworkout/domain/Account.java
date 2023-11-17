@@ -43,12 +43,16 @@ public class Account {
 
     private boolean studyCreatedByEmail; //스터디가 만들어졌다는걸 이메일로 받을거?
 
-    private boolean studyCreatedByWeb;//스터디가 만들어졌다는걸 web으로 받을거?
+    private boolean studyCreatedByWeb = true;//스터디가 만들어졌다는걸 web으로 받을거?
 
     private boolean studyEnrollmentResultByEmail; //스터디 모임의 가입신청결과를
-    private boolean studyEnrollmentResultByWeb; //스터디 모임의 가입신청결과를
-    private boolean studyUpdatedResultByWeb; //스터디 바뀐 결과를
+    private boolean studyEnrollmentResultByWeb = true; //스터디 모임의 가입신청결과를
     private boolean studyUpdatedResultByEmail; //스터디 바뀐 결과를
+    private boolean studyUpdatedResultByWeb = true; //스터디 바뀐 결과를
+
+    private boolean studyUpdatedByEmail;
+
+    private boolean studyUpdatedByWeb = true;
 
     private LocalDateTime emailCheckTokenGeneratedAt;
 
