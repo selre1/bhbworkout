@@ -5,6 +5,8 @@ import com.bhbworkout.account.CurrentUser;
 import com.bhbworkout.domain.Account;
 import com.bhbworkout.domain.Tag;
 import com.bhbworkout.tag.TagRepository;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springframework.http.ResponseEntity;
@@ -16,6 +18,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import javax.validation.Valid;
+import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -28,6 +31,8 @@ public class SettingsController {
     private final AccountService accountService;
 
     private final ModelMapper modelMapper;
+
+    private final ObjectMapper objectMapper;
 
     private final NicknameValidator nicknameValidator;
 
@@ -126,13 +131,20 @@ public class SettingsController {
     }
 
     @GetMapping("/settings/tags")
-    public String updateTags(@CurrentUser Account account, Model model){
+    public String updateTags(@CurrentUser Account account, Model model) throws JsonProcessingException {
         model.addAttribute(account);
-        Set<Tag> tags = accountService.getTags(account);
 
+
+        Set<Tag> tags = accountService.getTags(account);
         //태그 스트림의 맵으로 태그들을 문자열(title이 스트링이니까)로 바뀌고 이문자열을 수집해서 리스트로 변환
         //Tag::getTitle 문자열로 바뀜
         model.addAttribute("tags", tags.stream().map(Tag::getTitle).collect(Collectors.toList()));
+
+        //화이트리스트: 자동완성 목록
+        List<String> allTags = tagRepository.findAll().stream().map(Tag::getTitle).collect(Collectors.toList());
+        //json 문자열로 변환
+        model.addAttribute("whitelist", objectMapper.writeValueAsString(allTags));
+
         return "settings/tags";
     }
 
@@ -146,8 +158,19 @@ public class SettingsController {
         }
 
         accountService.addTag(account,tag);
+        return ResponseEntity.ok().build();
+    }
 
+    @PostMapping("/settings/tags/remove")
+    @ResponseBody
+    public ResponseEntity removeTags(@CurrentUser Account account, @RequestBody TagForm tagForm){
+        String title = tagForm.getTagTitle();
+        Tag tag = tagRepository.findByTitle(title);
+        if(tag == null){ //없는걸 삭제하라고 하면 안되니까
+            return ResponseEntity.badRequest().build();
+        }
 
+        accountService.removeTag(account,tag);
         return ResponseEntity.ok().build();
     }
 }

@@ -20,6 +20,8 @@
           <div class="alert alert-info" role="alert">
             참여하고 싶은 스터디 주제를 입력하세요.
           </div>
+          <!--자동완성에서 div로 값을 받아두고  스크립트에서 변환해서 입력해버림-->
+          <div id="whitelist" th:text="${whitelist}" hidden></div>
           <!-- List<String> tags = List.of("aaa", "bbb", "ccc")   => aaa,bbb,ccc  -->
           <input id="tags" type="text" name="tags" th:value="${#strings.listJoin(tags,',')}"
                  class="tagify-outside" aria-describedby="tagHelp"/>
@@ -68,6 +70,7 @@
 
         var tagify = new Tagify(tagInput,{
           pattern: /^.{0,20}$/,
+          whitelist: JSON.parse(document.querySelector("#whitelist").textContent),
           dropdown: {
             enabled: 1
           }
