@@ -3,19 +3,21 @@ package com.bhbworkout.settings;
 import com.bhbworkout.account.AccountService;
 import com.bhbworkout.account.CurrentUser;
 import com.bhbworkout.domain.Account;
+import com.bhbworkout.domain.Tag;
+import com.bhbworkout.tag.TagRepository;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.Errors;
 import org.springframework.web.bind.WebDataBinder;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.InitBinder;
-import org.springframework.web.bind.annotation.ModelAttribute;
-import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import javax.validation.Valid;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Controller
 @RequiredArgsConstructor
@@ -28,6 +30,8 @@ public class SettingsController {
     private final ModelMapper modelMapper;
 
     private final NicknameValidator nicknameValidator;
+
+    private final TagRepository tagRepository;
 
     @InitBinder("passwordForm")
     public void initBinder(WebDataBinder webDataBinder){
@@ -119,5 +123,31 @@ public class SettingsController {
         accountService.updateAccount(account,nicknameForm);
         attributes.addFlashAttribute("message", "닉네임을 변경했습니다.");
         return "redirect:" + "/settings/account";
+    }
+
+    @GetMapping("/settings/tags")
+    public String updateTags(@CurrentUser Account account, Model model){
+        model.addAttribute(account);
+        Set<Tag> tags = accountService.getTags(account);
+
+        //태그 스트림의 맵으로 태그들을 문자열(title이 스트링이니까)로 바뀌고 이문자열을 수집해서 리스트로 변환
+        //Tag::getTitle 문자열로 바뀜
+        model.addAttribute("tags", tags.stream().map(Tag::getTitle).collect(Collectors.toList()));
+        return "settings/tags";
+    }
+
+    @PostMapping("/settings/tags/add")
+    @ResponseBody
+    public ResponseEntity addTags(@CurrentUser Account account, @RequestBody TagForm tagForm){
+        String title = tagForm.getTagTitle();
+        Tag tag = tagRepository.findByTitle(title);
+        if(tag == null){
+            tag = tagRepository.save(Tag.builder().title(title).build());
+        }
+
+        accountService.addTag(account,tag);
+
+
+        return ResponseEntity.ok().build();
     }
 }

@@ -1,6 +1,7 @@
 package com.bhbworkout.account;
 
 import com.bhbworkout.domain.Account;
+import com.bhbworkout.domain.Tag;
 import com.bhbworkout.settings.NicknameForm;
 import com.bhbworkout.settings.Notifications;
 import com.bhbworkout.settings.Profile;
@@ -8,11 +9,8 @@ import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -22,6 +20,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -135,5 +135,34 @@ public class AccountService implements UserDetailsService {
         account.setNickname(nicknameForm.getNickname());
         accountRepository.save(account);
         login(account); // 네비바 로그인 상태 값 변경을 위해서 다시 로그인
+    }
+
+    @Transactional
+    public void sendLoginLink(Account account) {
+        account.generateEmailCheckToken();
+        SimpleMailMessage mailMessage = new SimpleMailMessage();
+        mailMessage.setTo(account.getEmail());
+        mailMessage.setSubject("bhb workout 로그인 링크");
+        mailMessage.setText("/login-by-email?token=" + account.getEmailCheckToken() + "&email=" + account.getEmail());
+        javaMailSender.send(mailMessage);
+    }
+
+    @Transactional
+    public void addTag(Account account, Tag tag) {
+        //account는 detached 상태이며, tomany 관계에서 모두 null임
+        //그래서 lazy loading 불가
+
+        //persist 상태일때만 lazy loading 가능
+
+        Optional<Account> byId = accountRepository.findById(account.getId());// 무조건 읽어옮
+        byId.ifPresent(a -> a.getTags().add(tag));
+
+        //레이지 로딩임 필요한 순간에 읽어옮
+        //accountRepository.getOne();
+    }
+
+    public Set<Tag> getTags(Account account) {
+       Optional<Account> byId = accountRepository.findById(account.getId());
+       return byId.orElseThrow().getTags(); // 없으면 에러를 던지고 있으면 태그정보 리턴
     }
 }
