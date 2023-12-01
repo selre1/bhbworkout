@@ -57,7 +57,7 @@ public class Account {
     private boolean studyUpdatedByWeb = true;
 
     @ManyToMany
-    private Set<Tag> tags;
+    private Set<Tag> tags = new HashSet<>();
     private LocalDateTime emailCheckTokenGeneratedAt;
 
     public void generateEmailCheckToken() {

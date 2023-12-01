@@ -20,6 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.swing.text.html.Option;
+import javax.validation.Valid;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -37,20 +38,26 @@ public class AccountService implements UserDetailsService {
     @Transactional
     public Account processNewAccount(SignUpForm signUpform) {
         Account newAccount = saveNewAccount(signUpform);
-        newAccount.generateEmailCheckToken();// 위의 트랙젝션안에 있어야 persist 상태가 됌
+
         sendSignUpMailSender(newAccount);
         return newAccount;
     }
 
-    private Account saveNewAccount(SignUpForm signUpform) {
-        Account account = Account.builder()
+    private Account saveNewAccount(@Valid SignUpForm signUpform) {
+        signUpform.setPassword(passwordEncoder.encode(signUpform.getPassword()));
+
+        //account를 인스턴스화해서 생성하기 때문에 초기화 필드값이 적용됌
+        Account account = modelMapper.map(signUpform,Account.class);
+        account.generateEmailCheckToken();// 위의 트랙젝션안에 있어야 persist 상태가 됌
+        //Builder에서는 초기화 필드는 무시됨 !!!
+        /*Account account = Account.builder()
                 .email(signUpform.getEmail())
                 .nickname(signUpform.getNickname())
                 .password(passwordEncoder.encode(signUpform.getPassword()))
                 .studyUpdatedResultByWeb(true)
                 .studyCreatedByWeb(true)
                 .studyEnrollmentResultByWeb(true)
-                .build();
+                .build();*/
         Account newAccount = accountRepository.save(account); // 여기서는 트랜잭션 (엔티티가 persist 영속성임)
         return newAccount;
     }
