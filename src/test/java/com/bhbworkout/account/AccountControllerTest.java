@@ -1,6 +1,8 @@
 package com.bhbworkout.account;
 
 import com.bhbworkout.domain.Account;
+import com.bhbworkout.mail.EmailMessage;
+import com.bhbworkout.mail.EmailService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,7 +35,7 @@ class AccountControllerTest {
     private AccountRepository accountRepository;
 
     @MockBean
-    private JavaMailSender javaMailSender;
+    private EmailService emailService;
 
     @DisplayName("인증 메일 확인 - 입력값 오류")
     @Test
@@ -110,7 +112,7 @@ class AccountControllerTest {
         assertNotNull(account.getEmailCheckToken());
         //assertTrue(accountRepository.existsByEmail("selre1@naver.com"));
         //any => 아무런 메세지 타임에 메세지가 호출 되었는가
-        then(javaMailSender).should().send(any(SimpleMailMessage.class));
+        then(emailService).should().sendEmail(any(EmailMessage.class));
     }
 
 }

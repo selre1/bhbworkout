@@ -1,14 +1,20 @@
 package com.bhbworkout.account;
 
+import com.bhbworkout.config.AppProperties;
 import com.bhbworkout.domain.Account;
 import com.bhbworkout.domain.Tag;
+import com.bhbworkout.domain.Zone;
+import com.bhbworkout.mail.EmailMessage;
+import com.bhbworkout.mail.EmailService;
 import com.bhbworkout.settings.NicknameForm;
 import com.bhbworkout.settings.Notifications;
 import com.bhbworkout.settings.Profile;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -18,22 +24,28 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.thymeleaf.TemplateEngine;
+import org.thymeleaf.context.Context;
 
+import javax.mail.MessagingException;
+import javax.mail.internet.MimeMessage;
 import javax.swing.text.html.Option;
 import javax.validation.Valid;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AccountService implements UserDetailsService {
 
     private final AccountRepository accountRepository;
-    private final JavaMailSender javaMailSender;
+    private final EmailService emailService;
     private final PasswordEncoder passwordEncoder;
-
     private final ModelMapper modelMapper;
+    private final TemplateEngine templateEngine;
+    private final AppProperties appProperties;
 
     @Transactional
     public Account processNewAccount(SignUpForm signUpform) {
@@ -63,12 +75,32 @@ public class AccountService implements UserDetailsService {
     }
 
     public void sendSignUpMailSender(Account newAccount) {
-        SimpleMailMessage message = new SimpleMailMessage();
+        Context context = new Context();
+        context.setVariable("link","/check-email-token?token="+ newAccount.getEmailCheckToken()+
+                "&email=" + newAccount.getEmail());
+        context.setVariable("nickname", newAccount.getNickname());
+        context.setVariable("linkName", "이메일 인증하기");
+        context.setVariable("message", "bhb workout 서비스를 이용하려면 링크를 클릭하세요.");
+        context.setVariable("host",appProperties.getHost());
+
+        String message = templateEngine.process("mail/simple-link",context);
+
+        EmailMessage emailMessage = EmailMessage.builder()
+                .to(newAccount.getEmail())
+                .subject("스터디, 회원가입")
+                .message(message)
+                .build();
+        emailService.sendEmail(emailMessage);
+
+
+       /* SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(newAccount.getEmail());
+        //naver로 smtp 사용하려면 setfrom이 있어야함
+        message.setFrom(newAccount.getEmail());
         message.setSubject("스터디, 회원가입");
         message.setText("/check-email-token?token="+ newAccount.getEmailCheckToken()+
                 "&email=" + newAccount.getEmail());
-        javaMailSender.send(message);
+        javaMailSender.send(message);*/
     }
 
     public void login(Account account) {
@@ -148,11 +180,29 @@ public class AccountService implements UserDetailsService {
     @Transactional
     public void sendLoginLink(Account account) {
         account.generateEmailCheckToken();
-        SimpleMailMessage mailMessage = new SimpleMailMessage();
+
+        Context context = new Context();
+        context.setVariable("link", "/login-by-email?token=" + account.getEmailCheckToken() + "&email=" + account.getEmail());
+        context.setVariable("nickname",account.getNickname());
+        context.setVariable("linkName","bhb workout 로그인하기");
+        context.setVariable("message", "로그인 하려면 아래 링크를 클릭하세요");
+        context.setVariable("host",appProperties.getHost());
+
+        String message  = templateEngine.process("mail/simple-link.html", context);
+
+
+        EmailMessage emailMessage = EmailMessage.builder()
+                .to(account.getEmail())
+                .subject("bhb workout 로그인 링크")
+                .message(message)
+                .build();
+
+        emailService.sendEmail(emailMessage);
+        /*SimpleMailMessage mailMessage = new SimpleMailMessage();
         mailMessage.setTo(account.getEmail());
         mailMessage.setSubject("bhb workout 로그인 링크");
         mailMessage.setText("/login-by-email?token=" + account.getEmailCheckToken() + "&email=" + account.getEmail());
-        javaMailSender.send(mailMessage);
+        javaMailSender.send(mailMessage);*/
     }
 
     @Transactional
@@ -178,5 +228,22 @@ public class AccountService implements UserDetailsService {
     public void removeTag(Account account, Tag tag) {
         Optional<Account> byId = accountRepository.findById(account.getId());
         byId.ifPresent(a -> a.getTags().remove(tag));
+    }
+
+    public Set<Zone> getZones(Account account) {
+        Optional<Account> byId = accountRepository.findById(account.getId());
+        return byId.orElseThrow().getZones();
+    }
+
+    @Transactional
+    public void addZone(Account account, Zone zone) {
+        Optional<Account> byId = accountRepository.findById(account.getId());
+        byId.ifPresent(z -> z.getZones().add(zone));
+    }
+
+    @Transactional
+    public void removeZone(Account account, Zone zone) {
+        Optional<Account> byId = accountRepository.findById(account.getId());
+        byId.ifPresent(z -> z.getZones().remove(zone));
     }
 }

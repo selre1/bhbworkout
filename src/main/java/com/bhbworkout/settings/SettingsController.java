@@ -4,7 +4,9 @@ import com.bhbworkout.account.AccountService;
 import com.bhbworkout.account.CurrentUser;
 import com.bhbworkout.domain.Account;
 import com.bhbworkout.domain.Tag;
+import com.bhbworkout.domain.Zone;
 import com.bhbworkout.tag.TagRepository;
+import com.bhbworkout.zone.ZoneRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -37,6 +39,8 @@ public class SettingsController {
     private final NicknameValidator nicknameValidator;
 
     private final TagRepository tagRepository;
+
+    private final ZoneRepository zoneRepository;
 
     @InitBinder("passwordForm")
     public void initBinder(WebDataBinder webDataBinder){
@@ -171,6 +175,41 @@ public class SettingsController {
         }
 
         accountService.removeTag(account,tag);
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/settings/zones")
+    public String updateZones(@CurrentUser Account account, Model model) throws JsonProcessingException {
+        model.addAttribute(account);
+
+        // 내가 저장했던 지역들만 가지고 온다
+        Set<Zone> zones = accountService.getZones(account);
+        model.addAttribute("zones", zones.stream().map(Zone::toString).collect(Collectors.toList()));
+
+        // 회원들의 모든 지역들을 가지고 온다.
+        List<String> allZones = zoneRepository.findAll().stream().map(Zone::toString).collect(Collectors.toList());
+        model.addAttribute("whitelist", objectMapper.writeValueAsString(allZones));
+
+        return "settings/zones";
+    }
+
+    @PostMapping("/settings/zones/add")
+    public ResponseEntity addZones(@CurrentUser Account account, @RequestBody ZoneForm zoneForm){
+        Zone zone = zoneRepository.findByCityAndProvince(zoneForm.getCityName(),zoneForm.getProvinceName());
+        if (zone == null){
+            return ResponseEntity.badRequest().build();
+        }
+
+        accountService.addZone(account,zone);
+        return ResponseEntity.ok().build();
+    }
+    @PostMapping("/settings/zones/remove")
+    public ResponseEntity removeZones(@CurrentUser Account account, @RequestBody ZoneForm zoneForm){
+        Zone zone = zoneRepository.findByCityAndProvince(zoneForm.getCityName(),zoneForm.getProvinceName());
+        if (zone == null){
+            return ResponseEntity.badRequest().build();
+        }
+        accountService.removeZone(account,zone);
         return ResponseEntity.ok().build();
     }
 }
