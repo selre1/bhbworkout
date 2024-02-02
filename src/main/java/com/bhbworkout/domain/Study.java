@@ -80,7 +80,7 @@ public class Study {
 
     public boolean isJoinable(UserAccount userAccount){
         Account account = userAccount.getAccount();
-        // 공개, 모집중, 맴버아님, 매니저가아님
+        // 공개, 모집중, 맴버아님, 매니저가아님,
         return this.isPublished() && this.isRecruiting()
                 && !this.members.contains(account) && !this.managers.contains(account);
     }
