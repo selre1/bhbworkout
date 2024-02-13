@@ -11,6 +11,7 @@ import com.bhbworkout.settings.Notifications;
 import com.bhbworkout.settings.Profile;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.hibernate.boot.model.naming.IllegalIdentifierException;
 import org.modelmapper.ModelMapper;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
@@ -31,6 +32,7 @@ import javax.mail.MessagingException;
 import javax.mail.internet.MimeMessage;
 import javax.swing.text.html.Option;
 import javax.validation.Valid;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -245,5 +247,15 @@ public class AccountService implements UserDetailsService {
     public void removeZone(Account account, Zone zone) {
         Optional<Account> byId = accountRepository.findById(account.getId());
         byId.ifPresent(z -> z.getZones().remove(zone));
+    }
+
+    @Transactional
+    public Account getAccount(String nickname) {
+        Account account = accountRepository.findByNickname(nickname);
+        if(nickname == null){
+            throw new IllegalIdentifierException(nickname + "에 해당하는 사용자가 없습니다.");
+        }
+
+        return account;
     }
 }

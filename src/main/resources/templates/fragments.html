@@ -20,6 +20,18 @@
             padding: 0;
             margin: 0;
         }
+        #study-logo {
+            height: 200px;
+            width: 100%;
+            overflow: hidden;
+            padding: 0;
+            margin: 0;
+        }
+        #study-logo img {
+            height: auto;
+            width: 100%;
+            overflow: hidden;
+        }
     </style>
 </head>
 
@@ -224,24 +236,57 @@
 
 <div th:fragment="study-menu(studyMenu)" class="row px-3 justify-content-center bg-light">
     <nav class="col-10 nav nav-tabs">
-        <a class="nav-item nav-link" th:classappend="${studyMenu == 'info'} ? active"
-           th:href="@{'/study/' + ${study.path}}">
+        <a class="nav-item nav-link" th:classappend="${studyMenu == 'info'}? active" th:href="@{'/study/' + ${study.path}}">
             <i class="fa fa-info-circle"></i> 소개
         </a>
-        <a class="nav-item nav-link" th:classappend="${studyMenu == 'members'} ? active"
-           th:href="@{'/study/' + ${study.path} + '/members'}">
+        <a class="nav-item nav-link" th:classappend="${studyMenu == 'members'} ? active" th:href="@{'/study/' + ${study.path} + '/members'}">
             <i class="fa fa-info-circle"></i> 구성원
         </a>
-        <a class="nav-item nav-link" th:classappend="${studyMenu == 'events'} ? active"
-           th:href="@{'/study/' + ${study.path} + '/events'}">
+        <a class="nav-item nav-link" th:classappend="${studyMenu == 'events'} ? active" th:href="@{'/study/' + ${study.path} + '/events'}">
             <i class="fa fa-info-circle"></i> 모임
         </a>
 
-        <a sec:authorize="isAuthenticated()" th:if="${study.isManager(#authentication.principal)}"
-           class="nav-item nav-link" th:href="@{'/study/' + ${study.path} + '/events'}">
+        <a sec:authorize="isAuthenticated()" th:if="${study.isManager(#authentication.principal)}" th:classappend="${studyMenu == 'settings'} ? active" class="nav-item nav-link" th:href="@{'/study/' + ${study.path} + '/settings/description'}">
             <i class="fa fa-info-circle"></i> 설정
         </a>
     </nav>
+</div>
+
+<div th:fragment="member-list(members, isManager)" class="row px-3 justify-content-center">
+    <ul class="list-unstyled col-10">
+        <li class="media mt-3" th:each="members: ${members}">
+            <svg th:if="${#strings.isEmpty(members?.profileImage)}" th:data-jdenticon-value="${members.nickname}" width="64", height="64" class="rounded border bg-light mr-3"></svg>
+            <img th:if="${!#strings.isEmpty(members?.profileImage)}" th:src="${members?.profileImage}" width="64", height="64" class="rounded border mr-3">
+            <div class="media-body">
+                <h5 class="mt-0 mb-1">
+                    <span th:text="${members.nickname}"></span>
+                    <span th:if="${isManager}" class="badge badge-primary">관리자</span>
+                </h5>
+                <span th:text="${members.bio}"></span>
+            </div>
+        </li>
+    </ul>
+</div>
+
+<div th:fragment="study-settings-menu (currentMenu)" class="list-group">
+    <a class="list-group-item list-group-item-action" th:classappend="${currentMenu == 'description'}? active"
+    href="#" th:href="@{'/study/'+ ${study.path} + '/settings/description'}">소개</a>
+    <a class="list-group-item list-group-item-action" th:classappend="${currentMenu == 'banner'}? active"
+       href="#" th:href="@{'/study/'+ ${study.path} + '/settings/banner'}">배너 이미지</a>
+    <a class="list-group-item list-group-item-action" th:classappend="${currentMenu == 'tags'}? active"
+       href="#" th:href="@{'/study/'+ ${study.path} + '/settings/tags'}">스터디 주제</a>
+    <a class="list-group-item list-group-item-action" th:classappend="${currentMenu == 'zones'}? active"
+       href="#" th:href="@{'/study/'+ ${study.path} + '/settings/zones'}">활동 지역</a>
+    <a class="list-group-item list-group-item-action list-group-item-danger" th:classappend="${currentMenu == 'study'}? active"
+       href="#" th:href="@{'/study/'+ ${study.path} + '/settings/study'}">스터디</a>
+</div>
+
+
+<div th:fragment="message" th:if="${message}" class="alert alert-info alert-dismissible fade show mt-3" role="alert">
+    <span th:text="${message}">완료</span>
+    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+        <span aria-hidden="true">x</span>
+    </button>
 </div>
 
 </html>

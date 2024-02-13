@@ -82,4 +82,9 @@ public class Account {
         return this.getEmailCheckTokenGeneratedAt().isBefore(LocalDateTime.now().minusHours(1));
     }
 
+    public boolean isManagerOf(Study study) {
+        // account 기준으로 생각을 해서
+        // 스터디에 매니저들중에 해당 account가 매니져냐?
+        return study.getManagers().contains(this);
+    }
 }

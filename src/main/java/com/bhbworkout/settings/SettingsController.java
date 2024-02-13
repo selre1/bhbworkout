@@ -6,6 +6,7 @@ import com.bhbworkout.domain.Account;
 import com.bhbworkout.domain.Tag;
 import com.bhbworkout.domain.Zone;
 import com.bhbworkout.tag.TagRepository;
+import com.bhbworkout.tag.TagService;
 import com.bhbworkout.zone.ZoneRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -38,6 +39,7 @@ public class SettingsController {
 
     private final NicknameValidator nicknameValidator;
 
+    private final TagService tagService;
     private final TagRepository tagRepository;
 
     private final ZoneRepository zoneRepository;
@@ -155,12 +157,7 @@ public class SettingsController {
     @PostMapping("/settings/tags/add")
     @ResponseBody
     public ResponseEntity addTags(@CurrentUser Account account, @RequestBody TagForm tagForm){
-        String title = tagForm.getTagTitle();
-        Tag tag = tagRepository.findByTitle(title);
-        if(tag == null){
-            tag = tagRepository.save(Tag.builder().title(title).build());
-        }
-
+        Tag tag = tagService.findOrCreateNew(tagForm.getTagTitle());
         accountService.addTag(account,tag);
         return ResponseEntity.ok().build();
     }
@@ -195,6 +192,10 @@ public class SettingsController {
 
     @PostMapping("/settings/zones/add")
     public ResponseEntity addZones(@CurrentUser Account account, @RequestBody ZoneForm zoneForm){
+        /*
+        * 지역은 db에 이미 정해져서 저장되어 있음
+        * 그러므로 tag와는 달리 찾기만 하면 됨
+        * */
         Zone zone = zoneRepository.findByCityAndProvince(zoneForm.getCityName(),zoneForm.getProvinceName());
         if (zone == null){
             return ResponseEntity.badRequest().build();

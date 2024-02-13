@@ -19,8 +19,17 @@ import java.util.Set;
         @NamedAttributeNode("zones"),
         @NamedAttributeNode("managers"),
         @NamedAttributeNode("members")
-}
-)
+})
+@NamedEntityGraph(
+        name = "Study.withTagsAndManagers", attributeNodes = {
+                @NamedAttributeNode("tags"),
+        @NamedAttributeNode("managers")
+})
+@NamedEntityGraph(
+        name = "Study.withZonesAndManagers", attributeNodes = {
+            @NamedAttributeNode("zones"),
+        @NamedAttributeNode("managers")
+})
 @Entity
 @Getter
 @Setter
@@ -78,6 +87,7 @@ public class Study {
         this.managers.add(account);
     }
 
+    //타임리프에서 사용 study.isJoinable spring expression으로 객체 메서드로 호출 가능!!-
     public boolean isJoinable(UserAccount userAccount){
         Account account = userAccount.getAccount();
         // 공개, 모집중, 맴버아님, 매니저가아님,
@@ -85,10 +95,13 @@ public class Study {
                 && !this.members.contains(account) && !this.managers.contains(account);
     }
 
+    // 타임리프에서 시큐리티로 메서드 활용가능
     public boolean isMember(UserAccount userAccount){
+
         return this.members.contains(userAccount.getAccount());
     }
 
+    // 타임리프에서 시큐리티로 메서드 활용가능
     public boolean isManager(UserAccount userAccount){
         return this.managers.contains(userAccount.getAccount());
     }
