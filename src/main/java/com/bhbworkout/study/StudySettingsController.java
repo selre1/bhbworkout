@@ -178,4 +178,89 @@ public class StudySettingsController {
     private String getPath(String path) {
         return URLEncoder.encode(path, StandardCharsets.UTF_8);
     }
+
+    @GetMapping("/study")
+    public String viewStudy(@CurrentUser Account account, @PathVariable String path, Model model) throws AccessDeniedException {
+        Study study = studyService.getStudyToUpdate(account,path);
+        model.addAttribute(account);
+        model.addAttribute(study);
+        return "study/settings/study";
+    }
+
+    @PostMapping("/study/publish")
+    public String publishStudy(@CurrentUser Account account, @PathVariable String path, Model model, RedirectAttributes attributes) throws AccessDeniedException {
+        Study study = studyService.getStudyToUpdateStatus(account,path);
+        studyService.publishStudy(study);
+        attributes.addFlashAttribute("message", "스터디를 공개했습니다");
+        return "redirect:/study/"+getPath(path)+"/settings/study";
+    }
+
+    @PostMapping("/study/close")
+    public String closeStudy(@CurrentUser Account account, @PathVariable String path, Model model, RedirectAttributes attributes) throws AccessDeniedException {
+        Study study = studyService.getStudyToUpdateStatus(account,path);
+        studyService.closeStudy(study);
+        attributes.addFlashAttribute("message", "스터디를 종료했습니다");
+        return "redirect:/study/"+getPath(path)+"/settings/study";
+    }
+
+    @PostMapping("/recruit/start")
+    public String recruitStudy(@CurrentUser Account account, @PathVariable String path, Model model, RedirectAttributes attributes) throws AccessDeniedException {
+        Study study = studyService.getStudyToUpdateStatus(account,path);
+        if(!study.canRecruitStudy()){
+            attributes.addFlashAttribute("message", "스터디 모집을 1시간 이후 다시 시도하세요");
+            return "redirect:/study/"+getPath(path)+"/settings/study";
+        }
+
+        studyService.recruitStudy(study);
+        attributes.addFlashAttribute("message", "스터디 모집을 시작했습니다.");
+        return "redirect:/study/"+getPath(path)+"/settings/study";
+    }
+
+    @PostMapping("/recruit/stop")
+    public String stopRecruitStudy(@CurrentUser Account account, @PathVariable String path, Model model, RedirectAttributes attributes) throws AccessDeniedException {
+        Study study = studyService.getStudyToUpdateStatus(account,path);
+        if(!study.canRecruitStudy()){
+            attributes.addFlashAttribute("message", "스터디 중지를 1시간 이후 다시 시도하세요");
+            return "redirect:/study/"+getPath(path)+"/settings/study";
+        }
+        studyService.stopRecruitStudy(study);
+        attributes.addFlashAttribute("message", "스터디 모집을 종료했습니다.");
+        return "redirect:/study/"+getPath(path)+"/settings/study";
+    }
+
+    @PostMapping("/study/path")
+    public String updateStudyPath(@CurrentUser Account account, @PathVariable String path, String newPath, Model model, RedirectAttributes attributes) throws AccessDeniedException {
+        // @RequestParam은 생략이 가능하다!!
+        Study study = studyService.getStudyToUpdateStatus(account,path);
+        if(!studyService.isValidPath(newPath)){
+            model.addAttribute(account);
+            model.addAttribute(study);
+            model.addAttribute("studyPathError", "해당 스터디 경로는 사용할 수 없습니다.");
+            return "study/settings/study";
+        }
+        studyService.updateStudyPath(study,newPath);
+        attributes.addFlashAttribute("message", "경로 업데이트 완료했습니다.");
+        return "redirect:/study/"+getPath(newPath)+"/settings/study";
+    }
+
+    @PostMapping("/study/title")
+    public String updateStudyTitle(@CurrentUser Account account, @PathVariable String path, String newTitle, Model model, RedirectAttributes attributes) throws AccessDeniedException {
+        Study study = studyService.getStudyToUpdateStatus(account,path);
+        if(!studyService.isValidTitle(newTitle)){
+            model.addAttribute(account);
+            model.addAttribute(study);
+            model.addAttribute("studyTitleError", "해당 스터디 경로는 사용할 수 없습니다.");
+            return "study/settings/study";
+        }
+        studyService.updateStudyTitle(study,newTitle);
+        attributes.addFlashAttribute("message", "이름 업데이트 완료했습니다.");
+        return "redirect:/study/"+getPath(path)+"/settings/study";
+    }
+
+    @PostMapping("/study/remove")
+    public String removeStudy(@CurrentUser Account account, @PathVariable String path) throws AccessDeniedException {
+        Study study = studyService.getStudyToUpdateStatus(account,path);
+        studyService.remove(study);
+        return "redirect:/";
+    }
 }

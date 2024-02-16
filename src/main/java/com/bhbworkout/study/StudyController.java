@@ -73,4 +73,25 @@ public class StudyController {
         model.addAttribute(study);
         return "study/members";
     }
+
+    @GetMapping("/study/{path}/join")
+    public String joinStudy(@CurrentUser Account account, @PathVariable String path){
+        Study study = studyRepository.findStudyWithMembersByPath(path);
+
+        if(study == null){
+            throw new IllegalArgumentException(path + "에 해당하는 스터디가 없습니다.");
+        }
+        studyService.addMember(account,study);
+        return "redirect:/study/"+study.getEncodedPath() + "/members";
+    }
+
+    @GetMapping("/study/{path}/leave")
+    public String leaveStudy(@CurrentUser Account account, @PathVariable String path){
+        Study study = studyRepository.findStudyWithMembersByPath(path);
+        if(study == null){
+            throw new IllegalArgumentException(path + "에 해당하는 스터디가 없습니다.");
+        }
+        studyService.removeMember(account,study);
+        return "redirect:/study/"+study.getEncodedPath() + "/members";
+    }
 }

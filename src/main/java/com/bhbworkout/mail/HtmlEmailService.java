@@ -23,7 +23,7 @@ public class HtmlEmailService implements EmailService{
         try {
             MimeMessageHelper mimeMessageHelper = new MimeMessageHelper(mimeMessage,false,"UTF-8");
             mimeMessageHelper.setTo(emailMessage.getTo());
-            mimeMessageHelper.setFrom(emailMessage.getTo());
+            mimeMessageHelper.setFrom("selre1@naver.com");
             mimeMessageHelper.setSubject("스터디, 회원가입 입증");
             mimeMessageHelper.setText(emailMessage.getMessage(),true);
             javaMailSender.send(mimeMessage);

@@ -5,6 +5,7 @@ import com.bhbworkout.domain.Study;
 import com.bhbworkout.domain.Tag;
 import com.bhbworkout.domain.Zone;
 import com.bhbworkout.study.form.StudyDescriptionForm;
+import com.bhbworkout.study.form.StudyForm;
 import com.bhbworkout.tag.TagRepository;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
@@ -12,6 +13,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.nio.file.AccessDeniedException;
+
+import static com.bhbworkout.study.form.StudyForm.VALID_PATH_PATTERN;
 
 @Service
 @RequiredArgsConstructor
@@ -78,7 +81,7 @@ public class StudyService {
 
     @Transactional
     public Study getStudyToUpdateTag(Account account, String path) throws AccessDeniedException {
-        Study study = studyRepository.findAccountWithTagsByPath(path);
+        Study study = studyRepository.findStudyWithTagsByPath(path);
         if(study == null){
             throw new IllegalArgumentException(path + "에 해당하는 스터디가 없습니다.");
         }
@@ -91,7 +94,7 @@ public class StudyService {
 
     @Transactional
     public Study getStudyToupdateZone(Account account, String path) throws AccessDeniedException {
-        Study study = studyRepository.findAccountWithZonesByPath(path);
+        Study study = studyRepository.findStudyWithZonesByPath(path);
         if(study == null){
             throw new IllegalArgumentException(path + "에 해당하는 스터디가 없습니다.");
         }
@@ -109,5 +112,77 @@ public class StudyService {
     @Transactional
     public void removeZone(Study study, Zone zone) {
         study.getZones().remove(zone);
+    }
+
+    @Transactional
+    public void publishStudy(Study study) {
+        study.publish();
+    }
+
+    @Transactional
+    public void closeStudy(Study study) {
+        study.close();
+    }
+
+    @Transactional
+    public Study getStudyToUpdateStatus(Account account, String path) throws AccessDeniedException {
+        Study study = studyRepository.findStudyWithManagerByPath(path);
+        if(study == null){
+            throw new IllegalArgumentException(path + "에 해당하는 스터디가 없습니다.");
+        }
+        if(!account.isManagerOf(study)){
+            throw new AccessDeniedException("해당 기능을 사용할 수 없습니다.");
+        }
+        return study;
+    }
+
+    @Transactional
+    public void recruitStudy(Study study) {
+        study.recruit();
+    }
+
+    @Transactional
+    public void stopRecruitStudy(Study study) {
+        study.stopRecruit();
+    }
+
+    @Transactional
+    public void updateStudyPath(Study study, String newPath) {
+        study.setPath(newPath);
+    }
+
+    public boolean isValidPath(String newPath) {
+        if(!newPath.matches(VALID_PATH_PATTERN)){
+            return false;
+        }
+        return !studyRepository.existsByPath(newPath);
+    }
+
+    public boolean isValidTitle(String newTitle) {
+        return newTitle.length() <= 50;
+    }
+
+    @Transactional
+    public void updateStudyTitle(Study study, String newTitle) {
+        study.setTitle(newTitle);
+    }
+
+    @Transactional
+    public void remove(Study study) {
+        if(study.isRemovable()){
+            studyRepository.delete(study);
+        }else {
+            throw new IllegalArgumentException("스터디를 삭제할 수 업습니다.");
+        }
+    }
+
+    @Transactional
+    public void addMember(Account account, Study study) {
+        study.getMembers().add(account);
+    }
+
+    @Transactional
+    public void removeMember(Account account, Study study) {
+        study.getMembers().remove(account);
     }
 }
