@@ -25,6 +25,6 @@ public class EventForm {
     private LocalDateTime endDateTime; // 종료일시
 
     @Min(2)
-    private Integer limitOfEnrollments; // 최소 몇명?
+    private Integer limitOfEnrollments = 2; // 최소 몇명?
 
 }

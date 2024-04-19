@@ -185,4 +185,18 @@ public class StudyService {
     public void removeMember(Account account, Study study) {
         study.getMembers().remove(account);
     }
+
+    @Transactional
+    public Study getStudy(String path) {
+        return studyRepository.findByPath(path);
+    }
+
+    @Transactional
+    public Study getStudyToEnroll(String path) {
+        Study study = studyRepository.findStudyOnlyByPath(path);
+        if(study == null){
+            throw new IllegalArgumentException(path + "에 해당하는 스터디가 없습니다.");
+        }
+        return study;
+    }
 }
