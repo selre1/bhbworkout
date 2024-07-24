@@ -1,0 +1,254 @@
+package com.bhbworkout.modules.account;
+
+import com.bhbworkout.infra.config.AppProperties;
+import com.bhbworkout.modules.account.form.SignUpForm;
+import com.bhbworkout.modules.tag.Tag;
+import com.bhbworkout.modules.zone.Zone;
+import com.bhbworkout.infra.mail.EmailMessage;
+import com.bhbworkout.infra.mail.EmailService;
+import com.bhbworkout.modules.account.form.NicknameForm;
+import com.bhbworkout.modules.account.form.Notifications;
+import com.bhbworkout.modules.account.form.Profile;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.hibernate.boot.model.naming.IllegalIdentifierException;
+import org.modelmapper.ModelMapper;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.thymeleaf.TemplateEngine;
+import org.thymeleaf.context.Context;
+
+import javax.validation.Valid;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class AccountService implements UserDetailsService {
+
+    private final AccountRepository accountRepository;
+    private final EmailService emailService;
+    private final PasswordEncoder passwordEncoder;
+    private final ModelMapper modelMapper;
+    private final TemplateEngine templateEngine;
+    private final AppProperties appProperties;
+
+    @Transactional
+    public Account processNewAccount(SignUpForm signUpform) {
+        Account newAccount = saveNewAccount(signUpform);
+
+        sendSignUpMailSender(newAccount);
+        return newAccount;
+    }
+
+    private Account saveNewAccount(@Valid SignUpForm signUpform) {
+        signUpform.setPassword(passwordEncoder.encode(signUpform.getPassword()));
+
+        //account를 인스턴스화해서 생성하기 때문에 초기화 필드값이 적용됌
+        Account account = modelMapper.map(signUpform,Account.class);
+        account.generateEmailCheckToken();// 위의 트랙젝션안에 있어야 persist 상태가 됌
+        //Builder에서는 초기화 필드는 무시됨 !!!
+        /*Account account = Account.builder()
+                .email(signUpform.getEmail())
+                .nickname(signUpform.getNickname())
+                .password(passwordEncoder.encode(signUpform.getPassword()))
+                .studyUpdatedResultByWeb(true)
+                .studyCreatedByWeb(true)
+                .studyEnrollmentResultByWeb(true)
+                .build();*/
+        Account newAccount = accountRepository.save(account); // 여기서는 트랜잭션 (엔티티가 persist 영속성임)
+        return newAccount;
+    }
+
+    public void sendSignUpMailSender(Account newAccount) {
+        Context context = new Context();
+        context.setVariable("link","/check-email-token?token="+ newAccount.getEmailCheckToken()+
+                "&email=" + newAccount.getEmail());
+        context.setVariable("nickname", newAccount.getNickname());
+        context.setVariable("linkName", "이메일 인증하기");
+        context.setVariable("message", "bhb workout 서비스를 이용하려면 링크를 클릭하세요.");
+        context.setVariable("host",appProperties.getHost());
+
+        String message = templateEngine.process("mail/simple-link",context);
+
+        EmailMessage emailMessage = EmailMessage.builder()
+                .to(newAccount.getEmail())
+                .subject("스터디, 회원가입")
+                .message(message)
+                .build();
+        emailService.sendEmail(emailMessage);
+
+
+       /* SimpleMailMessage message = new SimpleMailMessage();
+        message.setTo(newAccount.getEmail());
+        //naver로 smtp 사용하려면 setfrom이 있어야함
+        message.setFrom(newAccount.getEmail());
+        message.setSubject("스터디, 회원가입");
+        message.setText("/check-email-token?token="+ newAccount.getEmailCheckToken()+
+                "&email=" + newAccount.getEmail());
+        javaMailSender.send(message);*/
+    }
+
+    public void login(Account account) {
+        UsernamePasswordAuthenticationToken token = new UsernamePasswordAuthenticationToken(
+          new UserAccount(account),
+          account.getPassword(),
+                List.of(new SimpleGrantedAuthority("ROLE_USER"))
+        );
+        SecurityContextHolder.getContext().setAuthentication(token);
+
+        //Authentication authentication = authenticationManager.authenticate(token);
+        //SecurityContext context = SecurityContextHolder.getContext();
+        //context.setAuthentication(authentication);
+    }
+
+
+    @Transactional(readOnly = true)
+    @Override
+    public UserDetails loadUserByUsername(String emailOrNickname) throws UsernameNotFoundException {
+        Account account = accountRepository.findByEmail(emailOrNickname);
+        if(account == null){
+            account = accountRepository.findByNickname(emailOrNickname);
+        }
+
+        if(account == null){
+            throw new UsernameNotFoundException(emailOrNickname);
+        }
+
+        return new UserAccount(account);
+    }
+
+    @Transactional
+    public void completeSignUp(Account account) {
+        account.completeSignUp();
+        login(account);
+    }
+
+    public void updateProfile(Account account, Profile profile) {
+        modelMapper.map(profile,account);
+
+       /* account.setUrl(profile.getUrl());
+        account.setOccupation(profile.getOccupation());
+        account.setLocation(profile.getLocation());
+        account.setBio(profile.getBio());
+        account.setProfileImage(profile.getProfileImage());*/
+        // ***** 중요 !! account가 persistence 상태가 아닌데 싱크를 맞출 수 있는 방법!!!
+        // save 구현체 안에서 아이디 값이 있는지 없는지 보고 있으면 merge를 시킴!!
+        // 아이디 값은 account 객체가 detached 상태여서 가지고 있음
+        // 노션 참고
+        // 그래서 save가 기존 데이터에 업데이트를 시키는거라고 생각하면 됌
+        accountRepository.save(account);
+    }
+
+    public void updatePassword(Account account, String newPassword) {
+        account.setPassword(passwordEncoder.encode(newPassword));
+        accountRepository.save(account);
+    }
+
+    public void updateNotifications(Account account, Notifications notifications) {
+
+        modelMapper.map(notifications,account);
+       /* account.setStudyCreatedByEmail(notifications.isStudyCreatedByEmail());
+        account.setStudyCreatedByWeb(notifications.isStudyCreatedByWeb());
+        account.setStudyUpdatedByEmail(notifications.isStudyUpdatedByEmail());
+        account.setStudyUpdatedByWeb(notifications.isStudyUpdatedByWeb());
+        account.setStudyEnrollmentResultByEmail(notifications.isStudyEnrollmentResultByEmail());
+        account.setStudyEnrollmentResultByWeb(notifications.isStudyEnrollmentResultByWeb());*/
+        accountRepository.save(account);
+    }
+
+    public void updateAccount(Account account, NicknameForm nicknameForm) {
+        account.setNickname(nicknameForm.getNickname());
+        accountRepository.save(account);
+        login(account); // 네비바 로그인 상태 값 변경을 위해서 다시 로그인
+    }
+
+    @Transactional
+    public void sendLoginLink(Account account) {
+        account.generateEmailCheckToken();
+
+        Context context = new Context();
+        context.setVariable("link", "/login-by-email?token=" + account.getEmailCheckToken() + "&email=" + account.getEmail());
+        context.setVariable("nickname",account.getNickname());
+        context.setVariable("linkName","bhb workout 로그인하기");
+        context.setVariable("message", "로그인 하려면 아래 링크를 클릭하세요");
+        context.setVariable("host",appProperties.getHost());
+
+        String message  = templateEngine.process("mail/simple-link.html", context);
+
+
+        EmailMessage emailMessage = EmailMessage.builder()
+                .to(account.getEmail())
+                .subject("bhb workout 로그인 링크")
+                .message(message)
+                .build();
+
+        emailService.sendEmail(emailMessage);
+        /*SimpleMailMessage mailMessage = new SimpleMailMessage();
+        mailMessage.setTo(account.getEmail());
+        mailMessage.setSubject("bhb workout 로그인 링크");
+        mailMessage.setText("/login-by-email?token=" + account.getEmailCheckToken() + "&email=" + account.getEmail());
+        javaMailSender.send(mailMessage);*/
+    }
+
+    @Transactional
+    public void addTag(Account account, Tag tag) {
+        //account는 detached 상태이며, tomany 관계에서 모두 null임
+        //그래서 lazy loading 불가
+
+        //persist 상태일때만 lazy loading 가능
+
+        Optional<Account> byId = accountRepository.findById(account.getId());// 무조건 읽어옮
+        byId.ifPresent(a -> a.getTags().add(tag));
+
+        //레이지 로딩임 필요한 순간에 읽어옮
+        //accountRepository.getOne();
+    }
+
+    public Set<Tag> getTags(Account account) {
+       Optional<Account> byId = accountRepository.findById(account.getId());
+       return byId.orElseThrow().getTags(); // 없으면 에러를 던지고 있으면 태그정보 리턴
+    }
+
+    @Transactional
+    public void removeTag(Account account, Tag tag) {
+        Optional<Account> byId = accountRepository.findById(account.getId());
+        byId.ifPresent(a -> a.getTags().remove(tag));
+    }
+
+    public Set<Zone> getZones(Account account) {
+        Optional<Account> byId = accountRepository.findById(account.getId());
+        return byId.orElseThrow().getZones();
+    }
+
+    @Transactional
+    public void addZone(Account account, Zone zone) {
+        Optional<Account> byId = accountRepository.findById(account.getId());
+        byId.ifPresent(z -> z.getZones().add(zone));
+    }
+
+    @Transactional
+    public void removeZone(Account account, Zone zone) {
+        Optional<Account> byId = accountRepository.findById(account.getId());
+        byId.ifPresent(z -> z.getZones().remove(zone));
+    }
+
+    @Transactional
+    public Account getAccount(String nickname) {
+        Account account = accountRepository.findByNickname(nickname);
+        if(nickname == null){
+            throw new IllegalIdentifierException(nickname + "에 해당하는 사용자가 없습니다.");
+        }
+
+        return account;
+    }
+}

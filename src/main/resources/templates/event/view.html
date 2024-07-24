@@ -113,7 +113,7 @@
                             <td>
                                 <span class="date-time" th:text="${enroll.enrolledAt}"></span>
                             </td>
-                            <td>
+                            <td>F
                                 <span th:if="${enroll.accepted}">확정</span>
                                 <span th:if="${!enroll.accepted}">대기중</span>
                             </td>
@@ -139,8 +139,8 @@
             <dl class="col-3 pt-3 text-right">
                 <dt class="font-weight-light">모집 방법</dt>
                 <dd>
-                    <span th:if="${event.eventType == T(com.bhbworkout.domain.EventType).FCFS}">선착순</span>
-                    <span th:if="${event.eventType == T(com.bhbworkout.domain.EventType).CONFIRMATIVE}">관리자 확인</span>
+                    <span th:if="${event.eventType == 'FCFS'}">선착순</span>
+                    <span th:if="${event.eventType == 'CONFIRMATIVE'}">관리자 확인</span>
                 </dd>
 
                 <dt class="font-weight-light">모집 인원</dt>
